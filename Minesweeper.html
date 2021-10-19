@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<title></title>
+  <style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    border: 1px solid black;
+  }
+  </style>
+</head>
+<body>
+  	<canvas id='game' width='400px' height='450px'></canvas>
+<button id='resetButton' onclick="ResetGame();" style="z-index: 1; right: 100px; bottom: 200px; position: relative; height: 20px; width: 100px">reset</button>
+<script>
+    var canvas = document.getElementById('game');
+    var ctx = canvas.getContext('2d');
+    var rButton = document.getElementById('resetButton');
+    
+    do{
+        var gridSelection = parseInt(prompt("Please enter a number from 1 to 50 for the grid's height and width", 10), 10);
+    }while(isNaN(gridSelection) || gridSelection > 50 || gridSelection < 1);
+
+    var gridRowCount = gridSelection;
+    var gridColCount = gridSelection;
+    var gridSize = 40;
+    var gridOffset = 50;
+
+    canvas.height = (gridRowCount * gridSize) + gridOffset;
+    canvas.width = gridColCount * gridSize;
+
+    var botButton = 200 + ((canvas.height - 450)/2);
+    rButton.style.bottom = "" + botButton + "px";
+    
+    var totalBombs = 0;
+    var flags = 0;
+    
+    var mouseX = 0;
+    var mouseY = 0;
+    var leftClick = false;
+    var rightClick = false;
+    
+    var gameOver = false;
+    var firstClick = true;
+
+    var timer = new Date().getTime();
+    var finalTime = 0;
+    
+    var grid = [];
+    for(var c = 0; c < gridColCount; c++){
+        grid[c] = [];
+        for(var r = 0; r < gridRowCount; r++){
+            grid[c][r] = {x: 0, y: 0, filled: false, revealed: 0, bomb: false, adjBombs: 0};
+        }
+    }
+    
+    function FillGrid(firstCol, firstRow){
+        if(firstClick){
+            grid[firstCol][firstRow].filled = true;
+            for(var n = -1; n <= 1; ++n){
+                for(var m = -1; m <= 1; ++m){
+                    if(n === 0 && m === 0){
+                        continue;
+                    }
+                    
+                    var ii = firstCol - n;
+                    var jj = firstRow - m;
+                    
+                    if(ii >= 0 && ii < gridColCount && jj >= 0 && jj < gridRowCount){
+                        grid[ii][jj].filled = true;
+                    }
+                }
+            }
+            firstClick = false;
+        }
+        for(var c=0; c < gridColCount; c++){
+            for(var r=0; r < gridRowCount; r++){
+                var g = grid[c][r];
+                
+                if(g.filled === false){
+                    var isBomb = Math.floor(Math.random() * 9);
+                    if(isBomb === 8){
+                        g.bomb = true;
+                        
+                        for(var n = -1; n <= 1; ++n){
+                            for(var m = -1; m <= 1; ++m){
+                                if(n === 0 && m === 0){
+                                    continue;
+                                }
+                                
+                                var ii = c - n;
+                                var jj = r - m;
+                                
+                                if(ii >= 0 && ii < gridColCount && jj >= 0 && jj < gridRowCount){
+                                    grid[ii][jj].adjBombs++;
+                                }
+                            }
+                        }
+                        totalBombs++;
+                        flags++;
+                        g.filled = true;
+                    }
+                    else{
+                        g.filled = true;
+                    }
+                }
+            }
+        }
+    }
+
+    function DrawGrid(){
+        for(var c=0; c<gridColCount; c++){
+            for(var r=0; r<gridRowCount; r++){
+                var g = grid[c][r];
+                
+                if(g.revealed === 1){
+                    if(g.bomb){
+                        ctx.beginPath();
+                        ctx.rect(g.x,g.y,gridSize,gridSize);
+                        ctx.fillStyle = 'red';
+                        ctx.fill();
+                        ctx.strokeStyle = 'black';
+                        ctx.stroke();
+                        ctx.closePath();
+                        
+                        RevealAll();
+                        GameOver("Game Over");
+                    }
+                    else if(g.adjBombs === 0){
+                        g.x = (r * gridSize);
+                        g.y = ((c * gridSize) + gridOffset);
+        
+                        ctx.beginPath();
+                        ctx.rect(g.x,g.y,gridSize,gridSize);
+                        ctx.fillStyle = 'grey';
+                        ctx.fill();
+                        ctx.strokeStyle = 'black';
+                        ctx.stroke();
+                        ctx.closePath();
+                        
+                        for(var n = -1; n <= 1; ++n){
+                            for(var m = -1; m <= 1; ++m){
+                                if(n === 0 && m === 0){
+                                    continue;
+                                }
+                                var ii = c - n;
+                                var jj = r - m;
+                                
+                                if(ii >= 0 && ii < gridColCount && jj >= 0 && 
+                                jj < gridRowCount){
+                                    
+                                    if(grid[ii][jj].adjBombs >= 0 && grid[ii][jj].revealed != 2){
+                                        
+                                        grid[ii][jj].revealed = 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else{
+                        g.x = (r * gridSize);
+                        g.y = ((c * gridSize) + gridOffset);
+        
+                        ctx.beginPath();
+                        ctx.rect(g.x,g.y,gridSize,gridSize);
+                        ctx.fillStyle = 'grey';
+                        ctx.fill();
+                        ctx.strokeStyle = 'black';
+                        ctx.stroke();
+                        ctx.closePath();
+                        
+                        ctx.font = "16px Arial";
+                        ctx.fillStyle = "black";
+                        ctx.fillText("" + g.adjBombs, g.x+(gridSize/2), 
+                        g.y+(gridSize/2));
+                    }
+                }
+                else if(g.revealed === 2){
+                    g.x = (r * gridSize);
+                    g.y = ((c * gridSize) + gridOffset);
+    
+                    ctx.beginPath();
+                    ctx.rect(g.x,g.y,gridSize,gridSize);
+                    ctx.fillStyle = 'green';
+                    ctx.fill();
+                    ctx.strokeStyle = 'black';
+                    ctx.stroke();
+                    ctx.closePath();
+                    
+                    ctx.font = "16px Arial";
+                    ctx.fillStyle = "black";
+                    ctx.fillText("X", g.x+(gridSize/2), 
+                    g.y+(gridSize/2));
+                }
+                else{
+                    g.x = (r * gridSize);
+                    g.y = ((c * gridSize) + gridOffset);
+    
+                    ctx.beginPath();
+                    ctx.rect(g.x,g.y,gridSize,gridSize);
+                    ctx.fillStyle = 'green';
+                    ctx.fill();
+                    ctx.strokeStyle = 'black';
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            }
+        }
+    }
+    
+    function RevealCheck(){
+        for(var c=0; c<gridColCount; c++){
+            for(var r=0; r<gridRowCount; r++){
+                var g = grid[c][r];
+                
+                if(mouseX > g.x && mouseX < g.x + gridSize && mouseY > g.y && mouseY < g.y + gridSize && !gameOver){
+                    
+                    if(leftClick){
+                        if(g.revealed === 0){
+                            if(firstClick){
+                                FillGrid(c, r);
+                            }
+                            g.revealed = 1;
+                            
+                        }
+                    }
+                    else if(rightClick){
+                        if(g.revealed === 0 && flags > 0){
+                            flags--;
+                            g.revealed = 2;
+                            rightClick = false;
+
+                        }
+                        else if(g.revealed === 2){
+                            flags++;
+                            g.revealed = 0;
+                            rightClick = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    function ResetGame(){
+        for(var c = 0; c < gridColCount; c++){
+            grid[c] = [];
+            for(var r = 0; r < gridRowCount; r++){
+                grid[c][r] = {x: 0, y: 0, filled: false, revealed: 0, bomb: false, adjBombs: 0};
+            }
+        }
+        totalBombs = 0;
+        flags = 0;
+        firstClick = true;
+        timer = new Date().getTime();
+        gameOver = false;
+    }
+    function TimeTrack(){
+        if(!gameOver){
+            finalTime = Math.floor((new Date().getTime() - timer)/1000);
+        }
+        
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("Time: " + finalTime, 20, 40);
+    }
+
+    function RevealAll(){
+        for(var c = 0; c < gridColCount; c++){
+            for(var r = 0; r < gridRowCount; r++){
+                var g = grid[c][r];
+                
+                if(g.bomb){
+                    g.revealed = 1;
+                }
+            }
+        }
+    }
+    
+    function FlagText(){
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("Flags: " + flags, 20, 25);
+    }
+    
+    function GameOver(whatHappened){
+        gameOver = true;
+        ctx.font = "32px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("" + whatHappened, (canvas.width/2)-100, 25);
+    }
+    function WinCheck(){
+         if(flags === 0){
+            var check = 0;
+            for(var c = 0; c < gridColCount; c++){
+                for(var r = 0; r < gridRowCount; r++){
+                    
+                    if(grid[c][r].bomb === true && grid[c][r].revealed === 2){
+                        check++;
+                        if(check === totalBombs){
+                            GameOver("You Win");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    function GameLoop(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        DrawGrid();
+        FlagText();
+        RevealCheck();
+        WinCheck();
+        TimeTrack();
+        
+        requestAnimationFrame(GameLoop);
+    }
+    
+    document.addEventListener("mousemove", MouseMove, false);
+    document.addEventListener("mousedown", MouseDown, false);
+    document.addEventListener("mouseup", MouseUp, false);
+    document.oncontextmenu = function(){
+        return false;
+    }
+    
+    function MouseMove(e){
+        var relativeX = e.clientX - canvas.offsetLeft;
+        if(relativeX > 0 && relativeX < canvas.width){
+            mouseX = relativeX;
+        }
+        
+        var relativeY = e.clientY - canvas.offsetTop;
+        if(relativeY > 0 && relativeY < canvas.height){
+            mouseY = relativeY;
+        }
+    }
+    function MouseDown(e){
+        if(e.button === 0){
+            leftClick = true;
+        }
+        else if(e.button === 2){
+            rightClick = true;
+        }
+    }
+    function MouseUp(e){
+        if(e.button === 0){
+            leftClick = false;
+        }
+        else if(e.button === 2){
+            rightClick = false;
+        }
+    }
+    
+    requestAnimationFrame(GameLoop);
+    
+</script>
+
+  <script type="text/javascript">
+    	
+  </script>
+
+  <style type="text/css">
+    	
+  </style>
+</body>
+</html>
