@@ -1,0 +1,28 @@
+SATJavascript
+WASD to move red
+QE to rotate red
+Arrow Keys to move blue
+ZX to rotate blue
+
+Minesweeper
+Left Click to reveal space
+Right Click to flag space
+
+Pac-man
+WASD to change direction of movement
+
+Hangman
+Click guess then type letters or words
+
+TowerStack
+Space Bar to drop block
+
+Tanks
+Red
+-W to move forward
+-AD to rotate
+-S to shoot
+Blue
+-I to move forward
+-JL to rotate
+-K to shoot
