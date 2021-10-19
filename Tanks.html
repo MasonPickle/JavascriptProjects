@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<title></title>
+  <style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    border: 1px solid black;
+  }
+  </style>
+</head>
+<body>
+  	<canvas id='game' width='400px' height='400px'></canvas>
+<script>
+    var canvas = document.getElementById("game");
+    var ctx = canvas.getContext("2d");
+    
+    var x = canvas.width-20;
+    var y = canvas.height/2;
+    var x2 = 20;
+    var y2 = canvas.height/2;
+    
+    var speed = 0;
+    var speed2 = 0;
+    
+    var angle = 0;
+    var angle2 = 0;
+    
+    var tankOneLives = 3;
+    var tankTwoLives = 3;
+    
+    var gameOver = false;
+    var whoWon = "none";
+    
+    var keyPressed = [false, false, false, false, false, false, false, false];
+    
+    var walls = [];
+    for(var i = 0; i < 8; i++){
+        walls[i] = {x: 0, y: 0, w: 0, h: 0};
+    }
+    
+    var shellOne = [];
+    for(var i = 0; i < 3; i++){
+        shellOne[i] = {x: 0, y: 0, angle: 0, speed: 5, width: 4, height: 4, active: 0, time: new Date().getTime(), bounces: 0};
+    }
+    var shellTwo = [];
+    for(var i = 0; i < 3; i++){
+        shellTwo[i] = {x: 0, y: 0, angle: 0, speed: 5, width: 4, height: 4, active: 0, time: new Date().getTime(), bounces: 0};
+    }
+    
+    function DrawWall(){
+        for(var i = 0; i < 8; i++){
+            var w = walls[i];
+            
+            ctx.beginPath();
+            ctx.rect(w.x, w.y, w.w, w.h);
+            ctx.fillStyle = "green";
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+    
+    function DrawShell(){
+        for(var i = 0; i < shellOne.length; i++){
+            var s = shellOne[i];
+            
+            if(s.active === 1){
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.rotate(s.angle);
+                ctx.rect(s.width/2, s.height/2, s.width, s.height);
+                ctx.fillStyle = "maroon";
+                ctx.fill();
+                ctx.restore();
+                ctx.closePath();
+            }
+        }
+        
+        for(var i = 0; i < shellTwo.length; i++){
+            var s = shellTwo[i];
+            
+            if(s.active === 1){
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.rotate(s.angle);
+                ctx.rect(s.width/2, s.height/2, s.width, s.height);
+                ctx.fillStyle = "darkblue";
+                ctx.fill();
+                ctx.restore();
+                ctx.closePath();
+            }
+        }
+    }
+    
+    function Speed(){
+        for(var i = 0; i < shellOne.length; i++){
+            var s = shellOne[i];
+            
+            if(s.active === 1){
+                s.x -= s.speed * Math.cos(s.angle);
+                s.y -= s.speed * Math.sin(s.angle);
+            }
+        }
+        for(var i = 0; i < shellTwo.length; i++){
+            var s = shellTwo[i];
+            
+            if(s.active === 1){
+                s.x += s.speed * Math.cos(s.angle);
+                s.y += s.speed * Math.sin(s.angle);
+            }
+        }
+    }
+    
+    function ShellWallOne(){
+        for(var i = 0; i < 8; i++){
+            var w = walls[i];
+            
+            for(var sO = 0; sO < shellOne.length; sO++){
+                var s = shellOne[sO];
+                
+                if(s.active === 1 && new Date().getTime() - s.time > 75){
+                    if(s.x - (s.speed * Math.cos(s.angle)) > w.x - 4 && s.x - (s.speed * Math.cos(s.angle)) < w.x + (w.w + 4) && s.y > w.y && s.y < w.y + w.h){
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = -s.angle;
+                        s.time = new Date().getTime();
+                    }
+                    else if(s.x > w.x && s.x < w.x + w.w && s.y - (s.speed * Math.sin(s.angle)) > w.y - 4 && s.y - (s.speed * Math.sin(s.angle)) < w.y + (w.h + 4)){
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = 3 - s.angle;
+                        s.time = new Date().getTime();
+                    }
+                    
+                }
+            }
+        }
+    }
+    
+    function ShellWallTwo(){
+        for(var i = 0; i < 8; i++){
+            var w = walls[i];
+            
+            for(var sT = 0; sT < shellTwo.length; sT++){
+                var s = shellTwo[sT];
+                
+                if(s.active === 1){
+                    
+                    if(new Date().getTime() - s.time > 100){
+                        
+                        if(s.x + (s.speed * Math.cos(s.angle)) > w.x - 4 && s.x + (s.speed * Math.cos(s.angle)) < w.x + (w.w + 4) && s.y > w.y && s.y < w.y + w.h){
+                            s.bounces++;
+                            if(s.bounces > 3){
+                                s.active = 0;
+                            }
+                            
+                            s.speed = -s.speed;
+                            s.angle = -s.angle;
+                            s.time = new Date().getTime();
+                        }
+                        else if(s.x > w.x && s.x < w.x + w.w && s.y + (s.speed * Math.sin(s.angle)) > w.y - 4 && s.y + (s.speed * Math.sin(s.angle)) < w.y + (w.h + 4)){
+                            s.bounces++;
+                            if(s.bounces > 3){
+                                s.active = 0;
+                            }
+                            
+                            s.speed = -s.speed;
+                            s.angle = 3 - s.angle;
+                            s.time = new Date().getTime();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    function ShellMove(){
+        for(var o = 0; o < 8; o++){
+            var w = walls[o];
+            for(var i = 0; i < shellOne.length; i++){
+                var s = shellOne[i];
+            
+                if(s.active === 1 && new Date().getTime() - s.time > 75){
+                    if((s.x + (s.speed * Math.cos(s.angle)) > canvas.width-s.width/2 || s.x + (s.speed * Math.cos(s.angle)) < s.width/2)){
+                        
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = -s.angle;
+                        s.time = new Date().getTime();
+                    }
+                    else if((s.y + (s.speed * Math.sin(s.angle)) > canvas.height-s.width/2 || s.y + (s.speed * Math.sin(s.angle)) < s.width/2)){
+                        
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = 3 - s.angle;
+                        s.time = new Date().getTime();
+                    }
+                        
+                    if(s.x + 5 > x2 - 13 && s.x - 5 < x2 + 13 && s.y + 5 > y2 - 13 && s.y - 5 < y2 + 13){
+                        tankTwoLives--;
+                        if(tankTwoLives <= 0){
+                            whoWon = "Red";
+                            gameOver = true;
+                        }
+                        s.active = 0;
+                    }
+                    
+                }
+            }
+            
+            
+        }
+        
+    }
+    function ShellMoveTwo(){
+        for(var i = 0; i < shellTwo.length; i++){
+            var s = shellTwo[i];
+            
+            if(s.active === 1){
+                
+                if(new Date().getTime() - s.time > 100){
+                    if((s.x + (s.speed * Math.cos(s.angle)) > canvas.width-s.width/2 || s.x + (s.speed * Math.cos(s.angle)) < s.width/2)){
+                        
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = -s.angle;
+                        s.time = new Date().getTime();
+                    }
+                    else if((s.y + (s.speed * Math.sin(s.angle)) > canvas.height-s.width/2 || s.y + (s.speed * Math.sin(s.angle)) < s.width/2)){
+                        
+                        s.bounces++;
+                        if(s.bounces > 3){
+                            s.active = 0;
+                        }
+                        
+                        s.speed = -s.speed;
+                        s.angle = 3 - s.angle;
+                        s.time = new Date().getTime();
+                    }
+                    
+                }
+                if(s.x + 5 > x - 13 && s.x - 5 < x + 13 && s.y + 5 > y - 13 && s.y - 5 < y + 13){
+                    tankOneLives--;
+                    if(tankOneLives <= 0){
+                        whoWon = "Blue";
+                        gameOver = true;
+                    }
+                    s.active = 0;
+                }
+            }
+        }
+    }
+    
+    function Shoot(){
+        if(keyPressed[3]){
+            for(var i = 0; i < shellOne.length; i++){
+                var s = shellOne[i];
+                
+                if(s.active === 0){
+                    s.x = x;
+                    s.y = y;
+                    s.speed = 5;
+                    s.angle = angle;
+                    s.bounces = 0;
+                    s.active = 1;
+                    keyPressed[3] = false;
+                    break;
+                }
+            }
+        }
+        if(keyPressed[7]){
+            for(var i = 0; i < shellTwo.length; i++){
+                var s = shellTwo[i];
+                
+                if(s.active === 0){
+                    s.x = x2;
+                    s.y = y2;
+                    s.speed = 5;
+                    s.angle = angle2;
+                    s.bounces = 0;
+                    s.active = 1;
+                    keyPressed[7] = false;
+                    break;
+                }
+            }
+        }
+    }
+    
+    function DrawTank(){
+        ctx.beginPath();
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.rect(-10, -10, 20, 20);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        ctx.fillRect(-20, -5, 10, 10);
+        ctx.restore();
+        ctx.closePath();
+        
+        ctx.beginPath();
+        ctx.save();
+        ctx.translate(x2,y2);
+        ctx.rotate(angle2);
+        ctx.rect(-10, -10, 20, 20);
+        ctx.fillStyle = "blue";
+        ctx.fill();
+        ctx.fillRect(10, -5, 10, 10);
+        ctx.restore();
+        ctx.closePath();
+    }
+    
+    function EdgeDetectOne(){
+        if(x - (speed * Math.cos(angle)) > canvas.width - 10 || x - (speed * Math.cos(angle)) < 10 || y - (speed * Math.sin(angle)) > canvas.height-10 || y - (speed * Math.sin(angle)) < 10){
+            return true;
+        }
+    }
+    function TankDetectOne(){
+        if(SAT(x-10, y-10, 20, 20, angle, x, y, x2-10, y2-10, 20, 20, angle2, x2, y2)){
+            return true;
+        }
+    }
+    function WallDetectOne(){
+        for(var i = 0; i < 8; i++){
+            var w = walls[i];
+            
+            if(SAT(x-10, y-10, 20, 20, angle, x, y, w.x, w.y, w.w, w.h, 0, w.x + w.w/2, w.y + w.h/2)){
+                return true;
+            }
+        }
+    }
+    function EdgeDetectTwo(){
+        if(x2 + (speed2 * Math.cos(angle2)) > canvas.width - 10 || x2 + (speed2 * Math.cos(angle2)) < 10 || y2 + (speed2 * Math.sin(angle2)) > canvas.height - 10 || y2 + (speed2 * Math.sin(angle2)) < 10){
+            return true;
+        }
+    }
+    function TankDetectTwo(){
+        if(SAT(x2-10, y2-10, 20, 20, angle2, x2, y2, x-10, y-10, 20, 20, angle, x, y)){
+            return true;
+        }
+    }
+    function WallDetectTwo(){
+        for(var i = 0; i < 8; i++){
+            var w = walls[i];
+            
+            if(SAT(x2-10, y2-10, 20, 20, angle2, x2, y2, w.x, w.y, w.w, w.h, 0, w.x + w.w/2, w.y + w.h/2)){
+                return true;
+            }
+        }
+    }
+    function MoveOne(){
+        x -= speed * Math.cos(angle);
+        y -= speed * Math.sin(angle);
+        
+        if(keyPressed[0]){
+            if(speed < 5){
+                speed++;
+            }
+            
+            if((EdgeDetectOne() || TankDetectOne() || WallDetectOne()) && speed > -5){
+                for(var i = 0; i < Math.abs(speed); i++){
+                    if(EdgeDetectOne() || TankDetectOne() || WallDetectOne()){
+                        x -= -5 * (Math.abs(speed)/speed) * Math.cos(angle);
+                        y -= -5 * (Math.abs(speed)/speed) * Math.sin(angle);
+                    }
+                }
+            }
+            
+        }
+        else{
+            if(speed > 0){
+                speed -= 0.5;
+            }
+            if(EdgeDetectOne() || TankDetectOne() || WallDetectOne()){
+                for(var i = 0; i < Math.abs(speed); i++){
+                    if(EdgeDetectOne() || TankDetectOne() || WallDetectOne()){
+                        x -= -5 * (Math.abs(speed)/speed) * Math.cos(angle);
+                        y -= -5 * (Math.abs(speed)/speed) * Math.sin(angle);
+                    }
+                }
+            }
+            if(speed != 0 && speed < 0){
+                speed++;
+            }
+        }
+        
+        if(keyPressed[1]){
+            angle -= 0.1;
+        }
+        if(keyPressed[2]){
+            angle += 0.1;
+        }
+    }
+    function MoveTwo(){
+        x2 += speed2 * Math.cos(angle2);
+        y2 += speed2 * Math.sin(angle2);
+        
+        if(keyPressed[4]){
+            if(speed2 < 5){
+                speed2++;
+            }
+            if((EdgeDetectTwo() || TankDetectTwo() || WallDetectTwo()) && speed2 > -5){
+                speed2 = -4;
+                if(speed2 < 0){
+                    speed2++;
+                }
+            }
+        }
+        else{
+            if(speed2 > 0){
+                speed2 -= 0.5;
+            }
+            if(EdgeDetectTwo() || TankDetectTwo() || WallDetectTwo()){
+                speed2 = -5;
+            }
+            if(speed2 != 0 && speed2 < 0){
+                speed2++;
+            }
+        }
+        
+        if(keyPressed[5]){
+            angle2 -= 0.1;
+        }
+        if(keyPressed[6]){
+            angle2 += 0.1;
+        }
+    }
+    
+    function DrawLives(){
+        ctx.font = ("10px Arial");
+        ctx.fillStyle = "black";
+        ctx.fillText("Red Lives: " + tankOneLives, canvas.width-65, 20);
+        ctx.fillText("Blue Lives: " + tankTwoLives, 10, 20);
+    }
+    
+    function GameLoop(){
+        if(!gameOver){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            
+            DrawWall();
+            DrawShell();
+            Speed();
+            ShellMove();
+            ShellMoveTwo();
+            ShellWallOne();
+            ShellWallTwo();
+            Shoot();
+            DrawTank();
+            MoveOne();
+            MoveTwo();
+            DrawLives();
+            
+            requestAnimationFrame(GameLoop);
+        }
+        else{
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.font = ("30px Arial");
+            ctx.fillText(whoWon + " Tank Wins!", canvas.width/2-100, canvas.height/2);
+        }
+    }
+    
+    document.addEventListener("keydown", function(e){
+        if(e.keyCode === 87){//w
+            keyPressed[0] = true;
+        }
+        if(e.keyCode === 65){//a
+            keyPressed[1] = true;
+        }
+        else if(e.keyCode === 68){//d
+            keyPressed[2] = true;
+        }
+        if(e.keyCode === 83){//s
+            keyPressed[3] = true;
+        }
+        
+        if(e.keyCode === 73){//i
+            keyPressed[4] = true;
+        }
+        if(e.keyCode === 74){//j
+            keyPressed[5] = true;
+        }
+        else if(e.keyCode === 76){//l
+            keyPressed[6] = true;
+        }
+        if(e.keyCode === 75){//k
+            keyPressed[7] = true;   
+        }
+    })
+    document.addEventListener("keyup", function(e){
+        if(e.keyCode === 87){//w
+            keyPressed[0] = false;
+        }
+        if(e.keyCode === 65){//a
+            keyPressed[1] = false;
+        }
+        else if(e.keyCode === 68){//d
+            keyPressed[2] = false;
+        }
+        if(e.keyCode === 83){//s
+            keyPressed[3] = false;
+        }
+        
+        if(e.keyCode === 73){//i
+            keyPressed[4] = false;
+        }
+        if(e.keyCode === 74){//j
+            keyPressed[5] = false;
+        }
+        else if(e.keyCode === 76){//l
+            keyPressed[6] = false;
+        }
+        if(e.keyCode === 75){//k
+            keyPressed[7] = false;   
+        }
+    })
+    
+    function Walls(){
+        walls[0].x = 0;
+        walls[0].y = 0;
+        walls[0].w = 75;
+        walls[0].h = 75;
+        walls[1].x = canvas.width-75;
+        walls[1].y = 0;
+        walls[1].w = 75;
+        walls[1].h = 75;
+        walls[2].x = 0;
+        walls[2].y = canvas.height-75;
+        walls[2].w = 75;
+        walls[2].h = 75;
+        walls[3].x = canvas.width-75;
+        walls[3].y = canvas.height-75;
+        walls[3].w = 75;
+        walls[3].h = 75;
+        walls[4].x = canvas.width/2-42.5;
+        walls[4].y = 50;
+        walls[4].w = 85;
+        walls[4].h = 75;
+        walls[5].x = 50;
+        walls[5].y = canvas.height/2-42.5;
+        walls[5].w = 75;
+        walls[5].h = 85;
+        walls[6].x = canvas.width-125;
+        walls[6].y = canvas.height/2-42.5;
+        walls[6].w = 75;
+        walls[6].h = 85;
+        walls[7].x = canvas.width/2-42.5;
+        walls[7].y = canvas.height-125;
+        walls[7].w = 85;
+        walls[7].h = 75;
+    }
+    
+    Walls();
+    
+    class Vertex {
+        constructor(x, y){
+            this.x = x; this.y = y;
+        }
+    }
+    class Line{
+        constructor(v1, v2){
+            this.v1 = v1; this.v2 = v2;
+        }
+    }
+    
+    function DotProduct(p0, p1, p2){
+        var x0 = p0.x, y0 = p0.y;
+        var dx1 = p1.x-x0, dy1 = p1.y-y0;
+        var dx2 = p2.x-x0, dy2 = p2.y-y0;
+        if(dx1 * dy2 > dy1 * dx2)
+            return + 1;
+        if(dx1 * dy2 < dy1 * dx2)
+            return - 1;
+        if((dx1 * dx2 < 0) || (dy1 * dy2 < 0))
+            return - 1;
+        if(Math.hypot(dx1, dy1) < Math.hypot(dx2, dy2))
+            return + 1;
+        return 0;
+    }
+    function LineIntersect(L1, L2){
+        var a = L1.v1, b = L1.v2;
+        var c = L2.v1, d = L2.v2;
+        var b1 = DotProduct(a, b, c) * DotProduct(a, b, d) <= 0;
+        var b2 = DotProduct(c, d, a) * DotProduct(c, d, b) <= 0;
+        return b1 && b2;
+    }
+    function RotPoint(v1, pivot, vAngle){
+        var newX = (v1.x - pivot.x) * Math.cos(vAngle) - (v1.y - pivot.y) * Math.sin(vAngle) + pivot.x;
+        var newY = (v1.x - pivot.x) * Math.sin(vAngle) + (v1.y - pivot.y) * Math.cos(vAngle) + pivot.y;
+        return new Vertex(newX, newY);
+    }
+    function SAT(x1, y1, w1, h1, angle1, centerX1, centerY1, x2, y2, w2, h2, angle2, centerX2, centerY2){
+        var result = false;
+        var object1 = [4];
+        var object2 = [4];
+        var p1 = [4];
+        var p2 = [4];
+        
+        p1[0] = new Vertex(x1, y1);
+        p1[1] = new Vertex(x1 + w1, y1);
+        p1[2] = new Vertex(x1 + w1, y1 + h1);
+        p1[3] = new Vertex(x1, y1 + h1);
+        for(var i = 0; i < 4; i++){
+            p1[i] = RotPoint(p1[i], new Vertex(centerX1, centerY1), angle1);
+        }
+        p2[0] = new Vertex(x2, y2);
+        p2[1] = new Vertex(x2 + w2, y2);
+        p2[2] = new Vertex(x2 + w2, y2 + h2);
+        p2[3] = new Vertex(x2, y2 + h2);
+        for(var i = 0; i < 4; i++){
+            p2[i] = RotPoint(p2[i], new Vertex(centerX2, centerY2), angle2);
+        }
+        
+        object1[0] = new Line(p1[0], p1[1]);
+        object1[1] = new Line(p1[1], p1[2]);
+        object1[2] = new Line(p1[2], p1[3]);
+        object1[3] = new Line(p1[3], p1[0]);
+        
+        object2[0] = new Line(p2[0], p2[1]);
+        object2[1] = new Line(p2[1], p2[2]);
+        object2[2] = new Line(p2[2], p2[3]);
+        object2[3] = new Line(p2[3], p2[0]);
+        
+        for(var one = 0; one < 4; one++){
+            for(var two = 0; two < 4; two++){
+                if(LineIntersect(object1[one], object2[two])){
+                    result = true;
+                }
+            }
+        }
+        return result;
+    }
+    
+    requestAnimationFrame(GameLoop);
+</script>
+
+  <script type="text/javascript">
+    	
+  </script>
+
+  <style type="text/css">
+    	.welcome {
+		  color:green;
+		  font-size:36px;
+		  font-family:cursive;
+		  text-align:center;
+		  padding:20px;
+		}
+  </style>
+</body>
+</html>
