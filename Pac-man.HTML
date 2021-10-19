@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style>
+	html, body {
+    height: 100%;
+    margin: 0;
+    }
+
+    body {
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    }
+    canvas {
+    border: 1px solid rgb(0,0,180);
+    }
+    </style>
+</head>
+
+<body>
+
+<canvas id='game' width='560px' height='700px'></canvas>
+<script>
+    
+    var canvas = document.getElementById("game");
+    var ctx = canvas.getContext("2d");
+
+    var x = 270;
+    var y = 500;
+    var dx = -1;
+    var dy = 0;
+    var faceStart = 0.15;
+    var faceEnd = 0.8;
+    var score = 0;
+    var timer = new Date().getTime();
+
+    var wPressed = false;
+    var aPressed = false;
+    var sPressed = false;
+    var dPressed = false;
+
+    //28x31 grid, 560x620 border, 20x20 cells
+    var grid = [];
+    for(var c = 0; c < 28; c++){
+        grid[c] = [];
+        for(var r = 0; r < 31; r++){
+            grid[c][r] = {x: 0, y: 0, isWall: false, pellet: 0}  
+		}
+    }
+
+    var enemies = [];
+    for(var i = 0; i < 4; i++){
+        enemies[i] = {x: 240+i*20, y: 332, alive: false, state: "Scatter", stateTimer: new Date().getTime(),
+        nextTurn: "none", dir: "left", ghost: ""};
+        switch(i){
+            case 0:
+                enemies[0].ghost = "red";
+                break;
+            case 1:
+                enemies[1].ghost = "pink";
+                break;
+            case 2:
+                enemies[2].ghost = "blue";
+                break;
+            case 3:
+                enemies[3].ghost = "orange";
+                break;
+		}
+	}
+
+    function InitGrid(){
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                
+                g.x = c * 20;
+                g.y = 40+(r * 20);
+            }
+        }
+	}
+    InitGrid();
+
+    function SetDir(newDir){
+        switch(newDir){
+            case "left":
+                dx = -1;
+                dy = 0;
+                faceStart = 0.15;
+                faceEnd = 0.8;
+                break;
+            case "right":
+                dx = 1;
+                dy = 0;
+                faceStart = -0.8;
+                faceEnd = -0.15;
+                break;
+            case "up":
+                dx = 0;
+                dy = -1;
+                faceStart = 0.35;
+                faceEnd = 1.3;
+                break;
+            case "down":
+                dx = 0;
+                dy = 1;
+                faceStart = -1.3;
+                faceEnd = -0.35;
+                break;
+		}
+	}
+
+    function DrawGrid(){
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(g.isWall){
+                    ctx.beginPath();
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(g.x,g.y,20,20);
+                    ctx.closePath();
+				}
+            }
+        }
+        ctx.beginPath();
+        ctx.fillStyle = "white";
+        ctx.fillRect(grid[13][12].x, grid[13][12].y, 20, 20);
+        ctx.fillRect(grid[14][12].x, grid[14][12].y, 20, 20);
+        ctx.closePath();
+	}
+    function DrawPellet(){
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(g.pellet == 1){
+                    ctx.beginPath();
+                    ctx.fillStyle = "white";
+                    ctx.arc(g.x + 10,g.y + 10, 2.5, 0, 2*Math.PI);
+                    ctx.fill();
+                    ctx.closePath();
+                }
+                if(g.pellet == 2){
+                    ctx.beginPath();
+                    ctx.fillStyle = "white";
+                    ctx.arc(g.x + 10,g.y + 10, 7.5, 0, 2*Math.PI);
+                    ctx.fill();
+                    ctx.closePath();
+                }
+            }
+        }
+    }
+    function DrawPlayer(){
+        
+        if(new Date().getTime() - timer <= 300){
+            ctx.beginPath();
+            ctx.fillStyle = "yellow";
+            if(dx != 0)
+                ctx.arc(x+10, y+10, 9, -faceStart*Math.PI, faceEnd*Math.PI);
+            else
+                ctx.arc(x+10, y+10, 9, -faceStart*Math.PI, -faceEnd*Math.PI);
+            ctx.fill();
+            ctx.closePath();
+            ctx.beginPath();
+            ctx.fillStyle = "yellow";
+            if(dx != 0)
+                ctx.arc(x+10, y+10, 9, -faceEnd*Math.PI, faceStart*Math.PI);
+            else
+                ctx.arc(x+10, y+10, 9, faceStart*Math.PI, faceEnd*Math.PI);  
+            ctx.fill();
+            ctx.closePath();
+		}
+        if(new Date().getTime() - timer >= 300 && new Date().getTime() - timer <= 600){
+            ctx.beginPath();
+            ctx.fillStyle = "yellow";
+            ctx.arc(x+10, y+10, 9, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.closePath();
+		}
+        if(new Date().getTime() - timer >= 600){
+            timer = new Date().getTime();  
+		}
+	}
+    function DrawGhosts(){
+        for(var i = 0; i < 4; i++){
+            var e = enemies[i];
+            ctx.beginPath();  
+            switch(i){
+                case 0:
+                    ctx.fillStyle = "red";
+                    break;
+                case 1:
+                    ctx.fillStyle = "pink";
+                    break;
+                case 2:
+                    ctx.fillStyle = "cyan";
+                    break;
+                case 3:
+                    ctx.fillStyle = "orange";
+                    break;
+			}
+            ctx.fillRect(e.x+1, e.y+1, 18, 18);
+            ctx.closePath();
+		}
+	}
+
+    function PelletCollision(){
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(g.pellet == 1){
+                    if(g.x + 7.5 < x + 20 && g.x + 12.5 > x && g.y + 7.5 < y + 20 && g.y + 12.5 > y){
+                        score += 10;
+                        g.pellet = 0;
+					}        
+				}
+            }
+        }
+	}
+
+    function WallCollision(){
+        var collided = false;
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(g.isWall){
+                    if(x + dx < g.x + 20 && x + dx + 20 > g.x && y + dy < g.y + 20 && y + dy + 20 > g.y){
+                        collided = true;     
+					}
+                }
+            }
+        }
+        return collided;
+	}
+    function WallOpen(newDir){
+        var open = true;
+        var newX = 0;
+        var newY = 0;
+        switch(newDir){
+            case "up":
+                newX = 0;
+                newY = -1;
+                break;
+            case "left":
+                newX = -1;
+                newY = 0;
+                break;
+            case "down":
+                newX = 0;
+                newY = 1;
+                break;
+            case "right":
+                newX = 1;
+                newY = 0;
+                break;
+		}
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(g.isWall){
+                    if(x + newX < g.x + 20 && x + newX + 20 > g.x 
+                        && y + newY < g.y + 20 && y + newY + 20 > g.y){
+                        open = false;
+                    }
+                }
+            }
+        }
+        return open;
+	}
+
+    function MovePlayer(){
+        if(wPressed && WallOpen("up")){
+            SetDir("up");  
+		}
+        if(aPressed && WallOpen("left")){
+            SetDir("left");  
+		}
+        if(sPressed && WallOpen("down")){
+            SetDir("down");  
+		}
+        if(dPressed && WallOpen("right")){
+            SetDir("right");  
+		}
+
+        if(!WallCollision()){
+            x += dx;
+            y += dy;
+		}
+	}
+    function TeleportPlayer(){
+        if(x > canvas.width){
+            x = 0;
+	    }
+        if(x + 20 < 0){
+            x = canvas.width - 20;  
+		}
+	}
+
+    function ScoreText(){
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "white";
+        ctx.fillText(score, 100, 30);
+	}
+
+    function FindTarget(ghost, state){
+        var targetX = 0;
+        var targetY = 0;
+        if(state == "Scatter"){
+            switch(ghost){
+                case "red":
+                    targetX = 27;
+                    targetY = 0;
+                    break;
+                case "pink":
+                    targetX = 0;
+                    targetY = 0;
+                    break;
+                case "blue":
+                    targetX = 27;
+                    targetY = 30;
+                    break;
+                case "orange":
+                    targetX = 0;
+                    targetY = 30;
+                    break;
+			}
+		}
+        else if(state == "Chase"){
+            switch(ghost){
+                case "red":
+                    targetX = Math.floor((x+10)/20)-1;
+                    targetY = Math.floor((y-30)/20)-1;
+                    break;
+                case "pink":
+                    targetX = 0;
+                    targetY = 0;
+                    break;
+                case "blue":
+                    targetX = 27;
+                    targetY = 30;
+                    break;
+                case "orange":
+                    targetX = 0;
+                    targetY = 30;
+                    break;
+			}
+		}
+        return [targetX, targetY];
+	}
+    function Pathfind(ghost, state, targetX = 0, targetY = 0){
+        var nextDir = "none";
+        var gridX = Math.floor((enemies[ghost].x+10)/20)-1;
+        var gridY = Math.floor((enemies[ghost].y-30)/20)-1;
+
+        if(state == "Frightened"){
+            //random   
+		}
+        else{
+            switch(enemies[ghost].dir){
+                case "up":
+                    gridY--;
+                    break;
+                case "left":
+                    gridX--;
+                    break;
+                case "down":
+                    gridY++;
+                    break;
+                case "right":
+                    gridX++;
+                    break;
+			}
+
+            var dist = Distance(gridX, gridY, targetX, targetY);
+
+            if(Distance(gridX, gridY-1, targetX, targetY) > dist && !grid[gridX][gridY-1].isWall 
+                && enemies[ghost].dir != "down"){
+
+                dist = Distance(gridX, gridY-1, targetX, targetY) > dist;
+                nextDir = "up";
+			}
+            if(Distance(gridX-1, gridY, targetX, targetY) > dist && !grid[gridX-1][gridY].isWall
+                && enemies[ghost].dir != "right"){
+
+                dist = Distance(gridX-1, gridY, targetX, targetY) > dist;
+                nextDir = "left";
+			}
+            if(Distance(gridX, gridY+1, targetX, targetY) > dist && !grid[gridX][gridY+1].isWall
+                && enemies[ghost].dir != "up"){
+
+                dist = Distance(gridX, gridY+1, targetX, targetY) > dist;
+                nextDir = "down";
+			}
+            if(Distance(gridX+1, gridY, targetX, targetY) > dist && !grid[gridX+1][gridY].isWall
+                && enemies[ghost].dir != "left"){
+
+                dist = Distance(gridX+1, gridY, targetX, targetY) > dist;
+                nextDir = "right"
+			}
+		}
+
+        return nextDir;
+	}
+    function Distance(x1, y1, x2, y2){
+        var a = x1 - x2;
+        var b = y1 - y2;
+        return Math.sqrt((a*a) + (b*b));
+	}
+
+    function GameLoop(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        
+        DrawGrid();
+        DrawPellet();
+        DrawPlayer();
+        DrawGhosts();
+        MovePlayer();
+        TeleportPlayer();
+        ScoreText();
+        PelletCollision();
+
+        requestAnimationFrame(GameLoop);
+    }
+
+    document.addEventListener("keydown", KeyDownHandler, false);
+    function KeyDownHandler(e){
+        if(e.keyCode == 87){
+            wPressed = true;
+            aPressed = false;
+            sPressed = false;
+            dPressed = false;
+	    }
+        if(e.keyCode == 65){
+            aPressed = true;
+            wPressed = false;
+            sPressed = false;
+            dPressed = false;
+		}
+        if(e.keyCode == 83){
+            sPressed = true;  
+            wPressed = false;
+            aPressed = false;
+            dPressed = false;
+		}
+        if(e.keyCode == 68){
+            dPressed = true;
+            wPressed = false;
+            aPressed = false;
+            sPressed = false;
+		}
+	}
+    document.addEventListener("keyup", KeyUpHandler, false);
+    function KeyUpHandler(e){
+        if(e.keyCode == 87){
+            wPressed = false;
+	    }
+        if(e.keyCode == 65){
+            aPressed = false;
+		}
+        if(e.keyCode == 83){
+            sPressed = false;  
+		}
+        if(e.keyCode == 68){
+            dPressed = false;
+		}
+	}
+
+    function SetWalls(){
+        //top and bottom
+        for(var i = 0; i < 28; i++){
+            grid[i][0].isWall = true;  
+            grid[i][30].isWall = true;
+		}
+        //upper verticalwall
+        for(var i = 0; i < 10; i++){
+            grid[0][i].isWall = true;  
+            grid[27][i].isWall = true;  
+		}
+        //leftupper horizontalwall
+        for(var i = 0; i < 6; i++){
+            grid[i][9].isWall = true;
+		}
+        //rightupper horizontalwall
+        for(var i = 22; i < 28; i++){
+            grid[i][9].isWall = true;
+		}
+        //lower verticalwall
+        for(var i = 19; i < 31; i++){
+            grid[0][i].isWall = true;  
+            grid[27][i].isWall = true;  
+		}
+        //leftlower horizontalwall
+        for(var i = 0; i < 6; i++){
+            grid[i][19].isWall = true;
+		}
+        //rightlower horizontalwall
+        for(var i = 22; i < 28; i++){
+            grid[i][19].isWall = true;
+		}
+        //midupper verticalwall
+        for(var i = 9; i < 14; i++){
+            grid[5][i].isWall = true;  
+            grid[22][i].isWall = true;
+		}
+        //midlower verticalwall
+        for(var i = 15; i < 20; i++){
+            grid[5][i].isWall = true;  
+            grid[22][i].isWall = true;
+		}
+        //leftmid horizontalwall
+        for(var i = 0; i < 6; i++){
+            grid[i][13].isWall = true;
+            grid[i][15].isWall = true;
+		}
+        //rightmid horizontalwall
+        for(var i = 22; i < 28; i++){
+            grid[i][13].isWall = true;
+            grid[i][15].isWall = true;
+		}
+        //leftlower extra horizontalwall
+        for(var i = 0; i < 3; i++){
+            grid[i][24].isWall = true;
+            grid[i][25].isWall = true;
+		}
+        //rightlower extra horizontalwall
+        for(var i = 25; i < 28; i++){
+            grid[i][24].isWall = true;
+            grid[i][25].isWall = true;
+		}
+        //topleft upper innerwall
+        for(var o = 2; o < 5; o++){
+            for(var i = 2; i < 6; i++){
+                grid[i][o].isWall = true;
+            }
+            for(var i = 7; i < 12; i++){
+                grid[i][o].isWall = true;
+            }
+		}
+        //topleft leftlower innerwall
+        for(var i = 2; i < 6; i++){
+            for(var o = 6; o < 8; o++){
+                grid[i][o].isWall = true;
+			}
+        }
+        //topright upper innerwall
+        for(var o = 2; o < 5; o++){
+            for(var i = 22; i < 26; i++){
+                grid[i][o].isWall = true;
+            }   
+            for(var i = 16; i < 21; i++){
+                grid[i][o].isWall = true;
+            }
+		}
+        //topright leftlower innerwall
+        for(var i = 22; i < 26; i++){
+            for(var o = 6; o < 8; o++){
+                grid[i][o].isWall = true;
+			}
+        }
+        //topmid extra verticalwall
+        for(var i = 0; i < 5; i++){
+            grid[13][i].isWall = true;
+            grid[14][i].isWall = true;
+		}
+        //bottomleft leftupper innerwall
+        for(var i = 2; i < 6; i++){
+            grid[i][21].isWall = true;
+            grid[i][22].isWall = true;
+		}
+        for(var i = 23; i < 26; i++){
+            grid[4][i].isWall = true;
+            grid[5][i].isWall = true;
+		}
+        //bottomleft midlower innerwall
+        for(var i = 2; i < 12; i++){
+            grid[i][27].isWall = true;
+            grid[i][28].isWall = true;
+		}
+        for(var i = 24; i < 27; i++){
+            grid[7][i].isWall  = true;
+            grid[8][i].isWall  = true;
+		}
+        //bottomleft rightupper innerwall
+        for(var i = 7; i < 12; i++){
+            grid[i][21].isWall = true;
+            grid[i][22].isWall = true;
+		}
+        //bottomright leftupper innerwall
+        for(var i = 22; i < 26; i++){
+            grid[i][21].isWall = true;
+            grid[i][22].isWall = true;
+		}
+        for(var i = 23; i < 26; i++){
+            grid[22][i].isWall = true;
+            grid[23][i].isWall = true;
+		}
+        //bottomright midlower innerwall
+        for(var i = 16; i < 26; i++){
+            grid[i][27].isWall = true;
+            grid[i][28].isWall = true;
+		}
+        for(var i = 24; i < 27; i++){
+            grid[19][i].isWall  = true;
+            grid[20][i].isWall  = true;
+		}
+        //bottomright rightupper innerwall
+        for(var i = 16; i < 21; i++){
+            grid[i][21].isWall = true;
+            grid[i][22].isWall = true;
+		}
+        //bottommid extra innerwall
+        for(var i = 10; i < 18; i++){
+            grid[i][24].isWall = true;
+            grid[i][25].isWall = true;
+		}
+        for(var i = 26; i < 29; i++){
+            grid[13][i].isWall = true;
+            grid[14][i].isWall = true;
+		}
+        //midupper innerwall
+        for(var i = 10; i < 18; i++){
+            grid[i][6].isWall = true;
+            grid[i][7].isWall = true;
+		}
+        for(var i = 8; i < 11; i++){
+            grid[13][i].isWall = true;
+            grid[14][i].isWall = true;
+		}
+        //midlower innerwall
+        for(var i = 10; i < 18; i++){
+            grid[i][18].isWall = true;
+            grid[i][19].isWall = true;
+		}
+        for(var i = 20; i < 23; i++){
+            grid[13][i].isWall = true;
+            grid[14][i].isWall = true;
+		}
+        //bottomleft innerwall
+        for(var i = 15; i < 20; i++){
+            grid[7][i].isWall = true;  
+            grid[8][i].isWall = true;  
+		}
+        //bottomright innerwall
+        for(var i = 15; i < 20; i++){
+            grid[19][i].isWall = true;  
+            grid[20][i].isWall = true;  
+		}
+        //topleft innerwall
+        for(var i = 6; i < 14; i++){
+            grid[19][i].isWall = true;  
+            grid[20][i].isWall = true;  
+		}
+        for(var i = 9; i < 12; i++){
+            grid[i][9].isWall = true;  
+            grid[i][10].isWall = true;  
+		}
+        //topright innerwall
+        for(var i = 6; i < 14; i++){
+            grid[7][i].isWall = true;  
+            grid[8][i].isWall = true;  
+		}
+        for(var i = 16; i < 19; i++){
+            grid[i][9].isWall = true;  
+            grid[i][10].isWall = true;  
+		}
+        //midbox
+        for(var i = 10; i < 18; i++){
+            grid[i][12].isWall = true;  
+            grid[i][16].isWall = true;  
+		}
+        for(var i = 13; i < 16; i++){
+            grid[10][i].isWall = true;  
+            grid[17][i].isWall = true;  
+		}
+	}
+
+    function SetPellets(){
+        for(var c = 0; c < 28; c++){
+            for(var r = 0; r < 31; r++){
+                var g = grid[c][r];
+                if(!g.isWall)
+                    g.pellet = 1;
+            }
+        }
+        for(var c = 0; c < 6; c++){
+            for(var r = 10; r < 19; r++){
+                var g = grid[c][r];
+                g.pellet = 0;
+            }
+        }
+        for(var c = 22; c < 28; c++){
+            for(var r = 10; r < 19; r++){
+                var g = grid[c][r];
+                g.pellet = 0;
+            }
+        }
+        for(var c = 7; c < 21; c++){
+            for(var r = 9; r < 20; r++){
+                var g = grid[c][r];
+                g.pellet = 0;
+            }
+        }
+        grid[1][3].pellet = 2;
+        grid[26][3].pellet = 2;
+        grid[1][23].pellet = 2;
+        grid[26][23].pellet = 2;
+	}
+    SetWalls();
+    SetPellets();
+    requestAnimationFrame(GameLoop);
+</script>
+    
+</body>
+</html>
