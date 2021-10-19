@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<title></title>
+  <style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    border: 1px solid black;
+  }
+  </style>
+  
+</head>
+<body>
+  	<canvas id='game' width='400px' height='450px'></canvas>
+<button id="guessButton" onclick="MakeGuess();" style="z-index: 1; right: 100px; bottom: 200px; position: relative; height: 20px; width: 100px">guess</button>
+<script>
+    var canvas = document.getElementById("game");
+    var ctx = canvas.getContext('2d');
+    var gButton = document.getElementById("guessButton");
+    
+    var wordList = ["computer", "mouse", "keyboard", "coding", "monitor"];
+    var curWord = wordList[Math.floor(Math.random() * wordList.length)];
+    
+    var revealedLetters = [];
+    var wrongLetters = [];
+    
+    var userInput = "";
+    
+    var win = false;
+    var lose = false;
+    
+    var revWord = [];
+    for(var i = 0; i < curWord.length; i++){
+        revWord.push("_ ");
+    }
+    
+    function MakeGuess(){
+        userInput = prompt("enter a guess");
+        
+        if(!revealedLetters.includes(userInput) && !wrongLetters.includes(userInput)){
+            if(userInput === curWord){
+                for(var i = 0; i < curWord.length; i++){
+                    revealedLetters.push(curWord[i]);
+                }
+                win = true;
+                
+            }
+            
+            if(curWord.includes(userInput)){
+                revealedLetters.push(userInput);
+                
+                var check = 0;
+                for(var i = 0; i < curWord.length; i++){
+                    for(var r = 0; r < revealedLetters.length; r++){
+                        
+                        if(revealedLetters[r] === curWord.charAt(i)){
+                            check++
+                            if(check === curWord.length){
+                                win = true;
+                            }
+                            break;
+                            
+                        }
+                    }
+                }
+            }
+            else{
+                
+                wrongLetters.push(userInput);
+                if(wrongLetters.length === 6){
+                    lose = true;
+                }
+                
+            }
+        }
+        GameLoop();
+    }
+    
+    function DrawPost(){
+        ctx.beginPath();
+        ctx.moveTo(50, 100);
+        ctx.lineTo(150, 100);
+        ctx.lineTo(150, 150);
+        ctx.lineTo(150, 100);
+        ctx.lineTo(50, 100);
+        ctx.lineTo(50, 300);
+        ctx.lineTo(25,300);
+        ctx.lineTo(125,300);
+        ctx.stroke();
+        ctx.closePath();
+    }
+    
+    function DrawFigure(){
+        if(wrongLetters.length > 0){
+            ctx.beginPath();
+            ctx.arc(150, 165, 15, 0, Math.PI*2);
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+            ctx.closePath();
+        }
+        if(wrongLetters.length > 1){
+            ctx.beginPath();
+            ctx.moveTo(150,180);
+            ctx.lineTo(150,220);
+            ctx.stroke();
+            ctx.closePath();
+        }
+        if(wrongLetters.length > 2){
+            ctx.beginPath();
+            ctx.moveTo(150,220);
+            ctx.lineTo(170,240);
+            ctx.stroke();
+            ctx.closePath();
+        }
+        if(wrongLetters.length > 3){
+            ctx.beginPath();
+            ctx.moveTo(150,220);
+            ctx.lineTo(130,240);
+            ctx.stroke();
+            ctx.closePath();
+        }
+        if(wrongLetters.length > 4){
+            ctx.beginPath();
+            ctx.moveTo(150,180);
+            ctx.lineTo(170,200);
+            ctx.stroke();
+            ctx.closePath();
+        }
+        if(wrongLetters.length > 5){
+            ctx.beginPath();
+            ctx.moveTo(150,180);
+            ctx.lineTo(130,200);
+            ctx.stroke();
+            ctx.closePath();
+        }
+    }
+    
+    function DrawWord(){
+
+        for(var i = 0; i < curWord.length; i++){
+            for(var r = 0; r < revealedLetters.length; r++){
+                if(revealedLetters[r] === curWord.charAt(i)){
+                    revWord[i] = (revealedLetters[r] + " ");
+                }
+            }
+        }
+        
+        ctx.font = "32px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText(revWord.join(""), canvas.width/2-((curWord.length * 12)), canvas.height-50);
+        
+        ctx.font = "32px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText(wrongLetters, canvas.width/2+ 50,200);
+    }
+
+    function GameLoop(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        DrawWord();
+        DrawPost();
+        DrawFigure();
+        if(win){
+            ctx.font = "32px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("YOU WIN", (canvas.width/2) - 64, 50);
+            gButton.style.visibility = "hidden";
+        }
+        if(lose){
+            ctx.font = "32px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("YOU LOSE", (canvas.width/2) - 96, 50);
+            gButton.style.visibility = "hidden";
+        }
+    }
+    GameLoop();
+    
+</script>
+
+  <script type="text/javascript">
+    	
+  </script>
+
+  <style type="text/css">
+    	.welcome {
+		  color:green;
+		  font-size:36px;
+		  font-family:cursive;
+		  text-align:center;
+		  padding:20px;
+		}
+  </style>
+</body>
+</html>
