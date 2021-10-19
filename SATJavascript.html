@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  	<title>SAT Example</title>
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+    
+    body{
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    canvas{
+        border: 2px solid black;
+    }
+</style>
+</head>
+<body>
+  	<canvas id = "game" width = "400px" height = "400px"></canvas>
+<script>
+    var canvas = document.getElementById("game");
+    var ctx = canvas.getContext("2d");
+    
+    var x1 = 100, y1 = 200, width1 = 50, height1 = 50, angle1 = 0;
+    var x2 = 300, y2 = 200, width2 = 50, height2 = 100, angle2 = 0;
+    
+    function DrawSquares(){
+        ctx.beginPath();
+        ctx.save();
+        ctx.translate(x1+width1/2, y1+height1/2);
+        ctx.rotate(angle1);
+        ctx.fillStyle = "red";
+        ctx.fillRect(-width1/2,-height1/2,width1,height1);
+        ctx.restore();
+        ctx.closePath();
+        
+        ctx.beginPath();
+        ctx.save();
+        ctx.translate(x2+width2/2, y2+height2/2);
+        ctx.rotate(angle2);
+        ctx.fillStyle = "blue";
+        ctx.fillRect(-width2/2,-height2/2,width2,height2);
+        ctx.restore();
+        ctx.closePath();
+    }
+    function Loop(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        DrawSquares();
+        if(SAT(x1, y1, width1, height1, angle1, x1+width1/2, y1+height1/2, x2, y2, width2, height2, angle2, x2+width2/2, y2+height2/2)){
+            ctx.font="30px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("Colliding", canvas.width/2, 50);
+            ctx.textAlign = "center";
+        }
+        else{
+            ctx.font="30px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText("Not Colliding", canvas.width/2, 50);
+            ctx.textAlign = "center";
+        }
+        
+        requestAnimationFrame(Loop);
+    }
+    
+    document.addEventListener("keydown", function(e){
+        if(e.keyCode === 87)//w
+            y1--;
+        if(e.keyCode === 65)//a
+            x1--;
+        if(e.keyCode === 83)//s
+            y1++;
+        if(e.keyCode === 68)//d
+            x1++;
+        if(e.keyCode === 81)//q
+            angle1 -= 0.1;
+        if(e.keyCode === 69)//e
+            angle1 += 0.1;
+            
+        if(e.keyCode === 38)//up arrow
+            y2--;
+        if(e.keyCode === 37)//left arrow
+            x2--;
+        if(e.keyCode === 40)//down arrow
+            y2++;
+        if(e.keyCode === 39)//right arrow
+            x2++;
+        if(e.keyCode === 90)//z
+            angle2 -= 0.1;
+        if(e.keyCode === 88)//x
+            angle2 += 0.1;
+    })
+    
+    //start of Separating Axis Theorem
+    class Vertex {
+        constructor(x, y){
+            this.x = x; this.y = y;
+        }
+    }
+    class Line{
+        constructor(v1, v2){
+            this.v1 = v1; this.v2 = v2;
+        }
+    }
+    
+    function DotProduct(p0, p1, p2){
+        var x0 = p0.x, y0 = p0.y;
+        var dx1 = p1.x-x0, dy1 = p1.y-y0;
+        var dx2 = p2.x-x0, dy2 = p2.y-y0;
+        if(dx1 * dy2 > dy1 * dx2)
+            return + 1;
+        if(dx1 * dy2 < dy1 * dx2)
+            return - 1;
+        if((dx1 * dx2 < 0) || (dy1 * dy2 < 0))
+            return - 1;
+        if(Math.hypot(dx1, dy1) < Math.hypot(dx2, dy2))
+            return + 1;
+        return 0;
+    }
+    function LineIntersect(L1, L2){
+        var a = L1.v1, b = L1.v2;
+        var c = L2.v1, d = L2.v2;
+        var b1 = DotProduct(a, b, c) * DotProduct(a, b, d) <= 0;
+        var b2 = DotProduct(c, d, a) * DotProduct(c, d, b) <= 0;
+        return b1 && b2;
+    }
+    function RotPoint(v1, pivot, vAngle){
+        var newX = (v1.x - pivot.x) * Math.cos(vAngle) - (v1.y - pivot.y) * Math.sin(vAngle) + pivot.x;
+        var newY = (v1.x - pivot.x) * Math.sin(vAngle) + (v1.y - pivot.y) * Math.cos(vAngle) + pivot.y;
+        return new Vertex(newX, newY);
+    }
+    function SAT(x1, y1, w1, h1, angle1, centerX1, centerY1, x2, y2, w2, h2, angle2, centerX2, centerY2){
+        var result = false;
+        var object1 = [4];
+        var object2 = [4];
+        var p1 = [4];
+        var p2 = [4];
+        
+        p1[0] = new Vertex(x1, y1);
+        p1[1] = new Vertex(x1 + w1, y1);
+        p1[2] = new Vertex(x1 + w1, y1 + h1);
+        p1[3] = new Vertex(x1, y1 + h1);
+        for(var i = 0; i < 4; i++){
+            p1[i] = RotPoint(p1[i], new Vertex(centerX1, centerY1), angle1);
+        }
+        p2[0] = new Vertex(x2, y2);
+        p2[1] = new Vertex(x2 + w2, y2);
+        p2[2] = new Vertex(x2 + w2, y2 + h2);
+        p2[3] = new Vertex(x2, y2 + h2);
+        for(var i = 0; i < 4; i++){
+            p2[i] = RotPoint(p2[i], new Vertex(centerX2, centerY2), angle2);
+        }
+        
+        object1[0] = new Line(p1[0], p1[1]);
+        object1[1] = new Line(p1[1], p1[2]);
+        object1[2] = new Line(p1[2], p1[3]);
+        object1[3] = new Line(p1[3], p1[0]);
+        
+        object2[0] = new Line(p2[0], p2[1]);
+        object2[1] = new Line(p2[1], p2[2]);
+        object2[2] = new Line(p2[2], p2[3]);
+        object2[3] = new Line(p2[3], p2[0]);
+        
+        for(var one = 0; one < 4; one++){
+            for(var two = 0; two < 4; two++){
+                if(LineIntersect(object1[one], object2[two])){
+                    result = true;
+                }
+            }
+        }
+        return result;
+    }
+    
+    Loop();
+</script>
+
+  <script type="text/javascript">
+    	
+  </script>
+
+  <style type="text/css">
+    	
+  </style>
+</body>
+</html>
